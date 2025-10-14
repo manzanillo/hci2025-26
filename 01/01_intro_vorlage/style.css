@@ -1,0 +1,51 @@
+/* Grundlayout */
+body {
+  font-family: monospace;
+  margin: 0;
+  padding: 0;
+  background-color: #f8f8f8;
+  color: #333;
+}
+
+header, footer {
+  background-color: #222;
+  color: white;
+  text-align: center;
+  padding: 1rem;
+}
+
+main {
+  padding: 1rem;
+}
+
+#input-section {
+  margin-bottom: 2rem;
+}
+
+/* To-Do Karten */
+.todo-item {
+  background-color: #fff;
+  padding: 0.5rem 1rem;
+  margin-bottom: 0.5rem;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Buttons */
+button {
+  margin-left: 0.5rem;
+  cursor: pointer;
+}
+
+/* Dark Mode */
+body.dark {
+  background-color: #111;
+  color: #eee;
+}
+
+body.dark .todo-item {
+  background-color: #333;
+  color: #eee;
+}
