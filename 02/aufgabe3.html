@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vokabeltrainer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Tahoma', sans-serif;
+            background: radial-gradient(at 10% 50%, #fef9e7, #e8f9fd);
+        }
+        .doherty-threshold-line {
+            position: absolute;
+            left: calc((400 / 2000) * 100%);
+            top: 50%;
+            width: 2px;
+            height: 100%;
+            background-color: #ef4444;
+            transform: translateY(-50%);
+        }
+        .primary-bg {
+            background-color: rgba(255, 229, 92, 1);
+            color: #333;
+        }
+        .primary-bg:hover {
+            background-color: rgba(255, 209, 62, 1);
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: rgba(255, 229, 92, 1);
+            border: 2px solid white;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(0,0,0,0.3);
+            margin-top: -8px;
+        }
+        @keyframes scaleIn {
+            from {
+                transform: scale(0.5);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        .feedback-animation {
+            animation: scaleIn 0.3s ease-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-lg p-8 w-full max-w-lg space-y-6">
+        <header class="text-center">
+            <h1 class="text-3xl font-bold text-gray-800">Spanischer Vokabeltrainer</h1>
+            <p class="text-gray-500 mt-2">Lerne 10 Vokabeln im Multiple-Choice-Quiz</p>
+        </header>
+
+        <!-- Quiz-Bereich -->
+        <div id="quiz-container" class="space-y-6">
+            <div class="text-center">
+                <p id="current-word" class="text-4xl font-bold text-gray-700">Wort</p>
+                <div id="feedback-message" class="mt-4 text-2xl font-semibold opacity-0 transition-opacity duration-300"></div>
+            </div>
+
+            <div id="answer-options-container">
+                <!-- Die Antwortoptionen werden hier dynamisch eingefügt -->
+            </div>
+
+            <button id="next-question-btn" class="w-full primary-bg text-black font-bold py-3 px-6 rounded-lg transition-colors opacity-0 cursor-not-allowed">
+                Nächste Frage
+            </button>
+        </div>
+        
+        <!-- Einstellungen-Bereich -->
+        <div class="mt-8 pt-6 border-t border-gray-200">
+            <div class="flex items-center justify-between">
+                <h2 class="text-2xl font-semibold text-gray-700">Einstellungen</h2>
+                <button id="toggle-settings-btn" class="text-blue-500 hover:text-blue-700 font-medium">
+                    Einstellungen anzeigen
+                </button>
+            </div>
+            
+            <div id="settings-panel" class="space-y-6 mt-4 hidden">
+
+                <!-- Verzögerungs-Einstellung (Doherty Threshold) -->
+                <div>
+                    <label for="delay-slider" class="block text-gray-700 font-medium">
+                        Rückmeldungs-Verzögerung (<span id="delay-value">0</span> ms)
+                    </label>
+                    <div class="relative mt-2">
+                        <input type="range" id="delay-slider" min="0" max="2000" value="0" class="w-full h-2 bg-yellow-100 rounded-lg appearance-none cursor-pointer">
+                        <div class="doherty-threshold-line rounded-full"></div>
+                    </div>
+                    <p class="text-sm text-gray-500 mt-2">
+                        Das menschliche Gehirn empfindet eine Verzögerung von mehr als 400 ms als spürbar. Dies ist der "Doherty-Threshold". Er steht für das Maximum an akzeptabler Wartezeit, bevor Nutzer ihre Aufmerksamkeit verlieren.
+                    </p>
+                </div>
+
+                <!-- Design-Einstellung (Hick's Law) -->
+                <div>
+                    <label class="block text-gray-700 font-medium">Design der Antwortoptionen</label>
+                    <div class="flex mt-2 space-x-4">
+                        <button id="design-text-btn" class="px-4 py-2 primary-bg text-black rounded-lg font-medium transition-colors">
+                            Textliste
+                        </button>
+                        <button id="design-button-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors hover:bg-gray-300">
+                            Farbige Buttons
+                        </button>
+                    </div>
+                    <p class="text-sm text-gray-500 mt-2">
+                        Das Umschalten zwischen Textliste und Buttons veranschaulicht das <b>Hick'sche Gesetz</b>: Je mehr Auswahlmöglichkeiten ein Nutzer hat, desto länger braucht er, um eine Entscheidung zu treffen.
+                    </p>
+                </div>
+                
+                <!-- Größe der Buttons (Fitts' Law) -->
+                <div id="button-size-container">
+                    <label for="button-size-slider" class="block text-gray-700 font-medium">
+                        Größe der Buttons
+                    </label>
+                    <input type="range" id="button-size-slider" min="1" max="5" value="3" class="w-full h-2 bg-yellow-100 rounded-lg appearance-none cursor-pointer mt-2">
+                    <p class="text-sm text-gray-500 mt-2">
+                        Die Größe der Buttons veranschaulicht das <b>Fitts'sche Gesetz</b>: Die Zeit, die benötigt wird, um ein Zielobjekt zu erreichen, hängt von der Entfernung und der Größe des Ziels ab.
+                    </p>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Variablen für DOM-Elemente
+            const currentWordEl = document.getElementById('current-word');
+            const answerOptionsContainer = document.getElementById('answer-options-container');
+            const feedbackMessageEl = document.getElementById('feedback-message');
+            const nextQuestionBtn = document.getElementById('next-question-btn');
+            const toggleSettingsBtn = document.getElementById('toggle-settings-btn');
+            const settingsPanel = document.getElementById('settings-panel');
+            const delaySlider = document.getElementById('delay-slider');
+            const delayValueEl = document.getElementById('delay-value');
+            const designTextBtn = document.getElementById('design-text-btn');
+            const designButtonBtn = document.getElementById('design-button-btn');
+            const buttonSizeSlider = document.getElementById('button-size-slider');
+            const buttonSizeContainer = document.getElementById('button-size-container');
+
+            // Globale Zustandsvariablen
+            let currentQuizData = [];
+            let currentQuestionIndex = 0;
+            let answered = false;
+            let designMode = 'text'; // 'text' oder 'button'
+            let delayTime = 0;
+            let buttonSize = 3;
+
+            // Die Vokabeln (10 Stück)
+            const vocabulary = [
+                { spanish: 'Hola', german: 'Hallo', options: ['Tschüss', 'Bitte', 'Danke'] },
+                { spanish: 'Adiós', german: 'Tschüss', options: ['Hallo', 'Bitte', 'Entschuldigung'] },
+                { spanish: 'Gracias', german: 'Danke', options: ['Hallo', 'Bitte', 'Tschüss'] },
+                { spanish: 'Por favor', german: 'Bitte', options: ['Danke', 'Ja', 'Nein'] },
+                { spanish: 'Sí', german: 'Ja', options: ['Nein', 'Vielleicht', 'Gerne'] },
+                { spanish: 'No', german: 'Nein', options: ['Ja', 'Vielleicht', 'Gerne'] },
+                { spanish: 'Lo siento', german: 'Entschuldigung', options: ['Freut mich', 'Kein Problem', 'Hilfe'] },
+                { spanish: 'De nada', german: 'Gern geschehen', options: ['Danke', 'Kein Problem', 'Entschuldigung'] },
+                { spanish: 'Agua', german: 'Wasser', options: ['Wein', 'Brot', 'Kaffee'] },
+                { spanish: 'Comida', german: 'Essen', options: ['Trinken', 'Schlafen', 'Sprechen'] },
+                { spanish: 'Casa', german: 'Haus', options: ['Auto', 'Schule', 'Arbeit'] },
+                { spanish: 'Perro', german: 'Hund', options: ['Katze', 'Vogel', 'Fisch'] },
+                { spanish: 'Gato', german: 'Katze', options: ['Hund', 'Vogel', 'Fisch'] },
+                { spanish: 'Sol', german: 'Sonne', options: ['Mond', 'Stern', 'Wolke'] },
+                { spanish: 'Luna', german: 'Mond', options: ['Sonne', 'Stern', 'Wolke'] },
+                { spanish: 'Libro', german: 'Buch', options: ['Stift', 'Tisch', 'Stuhl'] },
+            ];
+
+            // Funktion zum Mischen eines Arrays
+            const shuffleArray = array => {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+                return array;
+            };
+
+            // Initialisierung der App
+            const init = () => {
+                // 10 zufällige Fragen auswählen und die Antwortoptionen mischen
+                currentQuizData = shuffleArray(vocabulary).slice(0, 10).map(item => {
+                    const allOptions = [item.german, ...item.options];
+                    return {
+                        spanish: item.spanish,
+                        correct: item.german,
+                        options: shuffleArray(allOptions),
+                    };
+                });
+                currentQuestionIndex = 0;
+                answered = false;
+                loadQuestion();
+            };
+
+            // Lädt die nächste Frage
+            const loadQuestion = () => {
+                if (currentQuestionIndex >= currentQuizData.length) {
+                    showFinalScore();
+                    return;
+                }
+
+                answered = false;
+                feedbackMessageEl.classList.remove('feedback-animation');
+                feedbackMessageEl.classList.add('opacity-0');
+                nextQuestionBtn.classList.add('opacity-0', 'cursor-not-allowed');
+                nextQuestionBtn.classList.remove('cursor-pointer');
+                
+                const currentQuestion = currentQuizData[currentQuestionIndex];
+                currentWordEl.textContent = currentQuestion.spanish;
+                
+                renderOptions(currentQuestion.options, currentQuestion.correct);
+            };
+
+            // Rendert die Antwortoptionen basierend auf dem Design
+            const renderOptions = (options, correct) => {
+                answerOptionsContainer.innerHTML = '';
+                options.forEach(option => {
+                    let optionElement;
+                    const paddingMap = { 1: 'py-2 px-4 text-base', 2: 'py-3 px-6 text-xl', 3: 'py-4 px-8 text-2xl', 4: 'py-5 px-10 text-3xl', 5: 'py-6 px-12 text-4xl'};
+                    
+                    if (designMode === 'text') {
+                        optionElement = document.createElement('div');
+                        optionElement.classList.add('bg-white', 'p-4', 'rounded-lg', 'shadow', 'cursor-pointer', 'transition-colors', 'hover:bg-gray-200', 'text-center', 'font-medium', 'text-gray-700', 'text-lg');
+                    } else { // designMode === 'button'
+                        optionElement = document.createElement('button');
+                        optionElement.classList.add('w-full', 'py-4', 'font-bold', 'rounded-lg', 'shadow-md', 'transition-all', 'hover:scale-105', 'hover:shadow-lg');
+                    
+                        // Fitts's Law: Adjust button size based on slider value
+                        optionElement.classList.add(...paddingMap[buttonSize].split(' '));
+                        optionElement.style.backgroundColor = `hsl(${Math.random() * 360}, 70%, 70%)`;
+                        optionElement.style.color = 'white';
+                    }
+
+                    optionElement.textContent = option;
+                    optionElement.dataset.value = option;
+
+                    optionElement.addEventListener('click', () => handleAnswer(option, correct));
+                    answerOptionsContainer.appendChild(optionElement);
+                });
+            };
+
+            // Behandelt die Antwort des Nutzers
+            const handleAnswer = (selected, correct) => {
+                if (answered) return;
+                answered = true;
+                
+                const allOptions = answerOptionsContainer.querySelectorAll(designMode === 'text' ? 'div' : 'button');
+
+                allOptions.forEach(optionEl => {
+                    const value = optionEl.dataset.value;
+                    if (value === selected) {
+                        optionEl.style.backgroundColor = (value === correct) ? '#10B981' : '#EF4444'; // Grün/Rot für richtig/falsch
+                        optionEl.style.color = 'white';
+                    } else if (value === correct) {
+                        optionEl.style.backgroundColor = '#22C55E'; // Richtige Antwort immer grün hervorheben
+                        optionEl.style.color = 'white';
+                    }
+                    optionEl.classList.remove('hover:bg-gray-200', 'hover:opacity-80', 'hover:scale-105', 'hover:shadow-lg');
+                    optionEl.classList.add('cursor-not-allowed');
+                });
+                
+                // Doherty Threshold: Verzögerung vor der Rückmeldung
+                setTimeout(() => {
+                    feedbackMessageEl.textContent = (selected === correct) ? 'Richtig!' : 'Falsch!';
+                    feedbackMessageEl.classList.remove('opacity-0');
+                    feedbackMessageEl.classList.add('feedback-animation');
+                    nextQuestionBtn.classList.remove('opacity-0', 'cursor-not-allowed');
+                    nextQuestionBtn.classList.add('cursor-pointer');
+                }, delayTime);
+            };
+
+            // Zeigt das Endergebnis an
+            const showFinalScore = () => {
+                currentWordEl.textContent = 'Quiz beendet!';
+                answerOptionsContainer.innerHTML = '';
+                feedbackMessageEl.textContent = 'Gut gemacht! Sie haben das Quiz abgeschlossen.';
+                feedbackMessageEl.classList.remove('opacity-0');
+                feedbackMessageEl.classList.add('feedback-animation');
+                nextQuestionBtn.textContent = 'Quiz neu starten';
+                nextQuestionBtn.classList.remove('opacity-0');
+                nextQuestionBtn.classList.add('cursor-pointer');
+            };
+
+            // Event-Listener für Einstellungen
+            toggleSettingsBtn.addEventListener('click', () => {
+                const isHidden = settingsPanel.classList.toggle('hidden');
+                toggleSettingsBtn.textContent = isHidden ? 'Einstellungen anzeigen' : 'Einstellungen ausblenden';
+            });
+
+            delaySlider.addEventListener('input', (e) => {
+                delayTime = parseInt(e.target.value);
+                delayValueEl.textContent = delayTime;
+            });
+            delaySlider.addEventListener('change', () => {
+                // Hier könnte man weitere Logik nach dem Loslassen des Sliders hinzufügen
+            });
+
+            designTextBtn.addEventListener('click', () => {
+                designMode = 'text';
+                buttonSizeContainer.classList.add('hidden');
+                designTextBtn.classList.replace('bg-gray-200', 'primary-bg');
+                designTextBtn.classList.replace('text-gray-700', 'text-black');
+                designButtonBtn.classList.replace('primary-bg', 'bg-gray-200');
+                designButtonBtn.classList.replace('text-black', 'text-gray-700');
+                loadQuestion();
+            });
+
+            designButtonBtn.addEventListener('click', () => {
+                designMode = 'button';
+                buttonSizeContainer.classList.remove('hidden');
+                designButtonBtn.classList.replace('bg-gray-200', 'primary-bg');
+                designButtonBtn.classList.replace('text-gray-700', 'text-black');
+                designTextBtn.classList.replace('primary-bg', 'bg-gray-200');
+                designTextBtn.classList.replace('text-black', 'text-gray-700');
+                loadQuestion();
+            });
+
+            buttonSizeSlider.addEventListener('input', (e) => {
+                buttonSize = parseInt(e.target.value);
+                // Dynamisch die Klassen für die Buttons neu rendern
+                loadQuestion(); 
+            });
+
+            nextQuestionBtn.addEventListener('click', () => {
+                if (nextQuestionBtn.textContent === 'Quiz neu starten') {
+                    init();
+                } else {
+                    currentQuestionIndex++;
+                    loadQuestion();
+                }
+            });
+
+            // Start der App
+            init();
+        });
+    </script>
+</body>
+</html>
