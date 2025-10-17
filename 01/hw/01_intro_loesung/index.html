@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>To-Do Demo – inspiriert von 1968</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Meine To-Do-Demo</h1>
+    <p>Simpel. Aber funktioniert ... bald</p>
+  </header>
+
+  <main>
+    <section id="input-section">
+      <input type="text" id="todo-input" placeholder="Neue Aufgabe hier eingeben">
+      <select id="priority-select">
+        <option value="niedrig">Priorität: Niedrig</option>
+        <option value="mittel">Priorität: Mittel</option>
+        <option value="hoch">Priorität: Hoch</option>
+      </select>
+      <button id="add-todo-btn">Aufgabe hinzufügen</button>
+    </section>
+
+    <section id="list-section">
+      <h2>Aufgabenliste</h2>
+      <ul id="todo-list">
+        </ul>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; 2025 Demo-Projekt</p>
+    <button id="toggle-darkmode">Dark Mode</button>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
