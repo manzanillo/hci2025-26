@@ -1,0 +1,47 @@
+body {
+  font-family: system-ui, sans-serif;
+  background: linear-gradient(to bottom, #cbe8ff, #ffffff);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+}
+
+.container {
+  background: white;
+  padding: 2rem;
+  border-radius: 1rem;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  text-align: center;
+  width: 320px;
+}
+
+label {
+  display: block;
+  margin: 0.5rem 0;
+}
+
+button {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  background-color: #0078d7;
+  color: white;
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #005fa3;
+}
+
+.weather-box {
+  margin-top: 1rem;
+  min-height: 60px;
+  transition: opacity 0.4s ease;
+  opacity: 0;
+}
+.weather-box.visible {
+  opacity: 1;
+}

@@ -1,0 +1,15 @@
+body {
+  background: linear-gradient(to bottom, #e3f2fd, #ffffff);
+  font-family: system-ui, sans-serif;
+}
+
+.weather-box {
+  min-height: 80px;
+  transition: opacity 0.5s ease;
+  opacity: 0;
+}
+
+/* Diese Klasse wird vom Script hinzugefügt */
+.weather-box.visible {
+  opacity: 1;
+}
