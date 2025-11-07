@@ -8,8 +8,8 @@ const SwipeKeyboard = ({ onKeyPress, typedText }) => {
   const [currentKey, setCurrentKey] = useState(null);
   const [keyStartTime, setKeyStartTime] = useState(null);
   const [keyDwellTimes, setKeyDwellTimes] = useState(new Map());
-  const [mouseDownTime, setMouseDownTime] = useState(null);
   const [mouseDownPosition, setMouseDownPosition] = useState(null);
+  const [hasMoved, setHasMoved] = useState(false);
   const keyboardRef = useRef(null);
 
   const DWELL_THRESHOLD = 100; // Mindestverweildauer in ms
@@ -64,12 +64,9 @@ const SwipeKeyboard = ({ onKeyPress, typedText }) => {
   };
 
   const handleMouseDown = (e) => {
-    // Verhindere Standard-Button-Click-Verhalten für Swipe-Start
-    e.preventDefault();
-    const currentTime = Date.now();
+    // Nicht preventDefault() - lasse normale Klicks durch
     const position = { x: e.clientX, y: e.clientY };
     
-    setMouseDownTime(currentTime);
     setMouseDownPosition(position);
     setIsDrawing(true);
     setCurrentPath([position]);
@@ -77,6 +74,7 @@ const SwipeKeyboard = ({ onKeyPress, typedText }) => {
     setCurrentKey(null);
     setKeyStartTime(null);
     setKeyDwellTimes(new Map());
+    setHasMoved(false);
   };
 
   const handleMouseMove = (e) => {
@@ -85,13 +83,24 @@ const SwipeKeyboard = ({ onKeyPress, typedText }) => {
     const newPath = [...currentPath, { x: e.clientX, y: e.clientY }];
     setCurrentPath(newPath);
 
+    // Prüfe ob sich die Maus bewegt hat
+    if (mouseDownPosition) {
+      const distance = Math.sqrt(
+        Math.pow(e.clientX - mouseDownPosition.x, 2) + 
+        Math.pow(e.clientY - mouseDownPosition.y, 2)
+      );
+      if (distance > MOVE_THRESHOLD) {
+        setHasMoved(true);
+      }
+    }
+
     const key = getKeyAtPosition(e.clientX, e.clientY);
     const currentTime = Date.now();
 
     if (key) {
       if (key !== currentKey) {
-        // Wechsel zu neuem Buchstaben
-        if (currentKey && keyStartTime) {
+        // Wechsel zu neuem Buchstaben - nur bei Swipe (Bewegung)
+        if (currentKey && keyStartTime && hasMoved) {
           const dwellTime = currentTime - keyStartTime;
           if (dwellTime >= DWELL_THRESHOLD) {
             addKeyToWord(currentKey);
@@ -109,8 +118,8 @@ const SwipeKeyboard = ({ onKeyPress, typedText }) => {
         }
       }
     } else {
-      // Nicht über einem Buchstaben
-      if (currentKey && keyStartTime) {
+      // Nicht über einem Buchstaben - nur bei Swipe
+      if (currentKey && keyStartTime && hasMoved) {
         const dwellTime = currentTime - keyStartTime;
         if (dwellTime >= DWELL_THRESHOLD) {
           addKeyToWord(currentKey);
@@ -123,28 +132,9 @@ const SwipeKeyboard = ({ onKeyPress, typedText }) => {
 
   const handleMouseUp = () => {
     if (isDrawing) {
-      const currentTime = Date.now();
-      const timeDiff = currentTime - (mouseDownTime || 0);
-      const lastPosition = currentPath[currentPath.length - 1];
-      const firstPosition = mouseDownPosition;
-      
-      // Berechne Bewegungsdistanz
-      let totalDistance = 0;
-      if (firstPosition && lastPosition) {
-        totalDistance = Math.sqrt(
-          Math.pow(lastPosition.x - firstPosition.x, 2) + 
-          Math.pow(lastPosition.y - firstPosition.y, 2)
-        );
-      }
-      
-      // Entscheide ob es ein Klick oder Swipe war
-      const wasClick = timeDiff < CLICK_THRESHOLD && totalDistance < MOVE_THRESHOLD;
-      
-      if (wasClick && currentKey) {
-        // Es war ein kurzer Klick auf einen Buchstaben
-        onKeyPress(currentKey);
-      } else if (!wasClick) {
-        // Es war ein Swipe - baue das finale Wort zusammen
+      // Nur Swipe-Verhalten wenn sich die Maus bewegt hat
+      if (hasMoved) {
+        const currentTime = Date.now();
         let finalWord = swipeWord;
         
         // Letzten Buchstaben hinzufügen falls noch nicht geschehen
@@ -166,7 +156,7 @@ const SwipeKeyboard = ({ onKeyPress, typedText }) => {
           }
         }
 
-        // Sofort das finale Wort senden
+        // Sofort das finale Wort senden (nur bei Swipe)
         if (finalWord) {
           // Prüfe ob ein Leerzeichen vorab hinzugefügt werden soll
           const needsSpacePrefix = typedText && typedText.length > 0 && !typedText.endsWith(' ');
@@ -178,18 +168,33 @@ const SwipeKeyboard = ({ onKeyPress, typedText }) => {
           }
         }
       }
+      // Bei normalen Klicks (ohne Bewegung) wird das onClick-Event der Buttons verarbeitet
     }
     
     setIsDrawing(false);
     setCurrentPath([]);
     setCurrentKey(null);
     setKeyStartTime(null);
-    setMouseDownTime(null);
     setMouseDownPosition(null);
+    
+    // Reset hasMoved nach kurzer Verzögerung um Click-Events zu ermöglichen
+    setTimeout(() => {
+      setHasMoved(false);
+    }, 100);
+    
     setTimeout(() => {
       setSwipeWord('');
       setKeyDwellTimes(new Map());
     }, 200);
+  };
+
+  const handleKeyClick = (key, e) => {
+    // Verhindere Click wenn gerade ein Swipe aktiv war
+    if (hasMoved) {
+      e.preventDefault();
+      return;
+    }
+    onKeyPress(key);
   };
 
   const handleSpaceClick = () => {
@@ -268,7 +273,7 @@ const SwipeKeyboard = ({ onKeyPress, typedText }) => {
               <button
                 key={keyIndex}
                 className={`keyboard-key swipe-key ${currentKey === key ? 'active-key' : ''}`}
-                onMouseDown={(e) => e.preventDefault()}
+                onClick={(e) => handleKeyClick(key, e)}
               >
                 {key.toUpperCase()}
               </button>
